@@ -157,7 +157,7 @@ export const addTransaction = async (transaction: Omit<Transaction, 'id'>): Prom
     // Convert Date to timestamp for storage
     const txWithDate = {
       ...transaction,
-      date: transaction.date.getTime(),
+      date: transaction.date instanceof Date ? transaction.date.getTime() : new Date(transaction.date).getTime(),
       createdAt: Date.now(),
     };
 
@@ -247,7 +247,7 @@ export const recordPayment = async (payment: Omit<Payment, 'id'>): Promise<numbe
     // Convert Date to timestamp for storage
     const paymentWithDate = {
       ...payment,
-      date: payment.date.getTime(),
+      date: payment.date instanceof Date ? payment.date.getTime() : new Date(payment.date).getTime(),
       createdAt: Date.now(),
     };
 
@@ -338,10 +338,30 @@ export const calculateFinancialSummary = async (
     let totalProfit = 0;
     let totalCost = 0;
 
-    // Initialize stakeholder totals
+    // Initialize stakeholder totals and balances
     const stakeholderTotals: { [stakeholderId: number]: number } = {};
+    const stakeholderBalances: { [stakeholderId: number]: {
+        totalShare: number;
+        totalPaid: number;
+        remaining: number;
+        payments: Payment[];
+      }} = {};
+
     activeStakeholders.forEach(stakeholder => {
       stakeholderTotals[stakeholder.id] = 0;
+
+      // Get global payments for this stakeholder (not tied to a specific month)
+      const globalPayments = payments.filter(p =>
+          p.stakeholderId === stakeholder.id &&
+          (p.isGlobalPayment === true || p.month === undefined)
+      );
+
+      stakeholderBalances[stakeholder.id] = {
+        totalShare: 0, // Will be calculated as we process months
+        totalPaid: globalPayments.reduce((sum, p) => sum + p.amount, 0),
+        remaining: 0, // Will be calculated after processing all months
+        payments: globalPayments
+      };
     });
 
     const monthlyCalculations = Object.keys(monthlyTransactions).sort().map(monthKey => {
@@ -377,11 +397,13 @@ export const calculateFinancialSummary = async (
         const share = monthlyBalance > 0 ? monthlyBalance * splitRatio : 0;
         stakeholderShares[stakeholder.id] = share;
         stakeholderTotals[stakeholder.id] += share;
+        stakeholderBalances[stakeholder.id].totalShare += share;
 
         // Get payments for this stakeholder and month
         const monthPayments = payments.filter(p =>
             p.stakeholderId === stakeholder.id &&
-            p.month === monthKey
+            p.month === monthKey &&
+            !p.isGlobalPayment
         );
 
         const totalPaid = monthPayments.reduce((sum, p) => sum + p.amount, 0);
@@ -402,12 +424,19 @@ export const calculateFinancialSummary = async (
       };
     });
 
+    // Calculate remaining balance for each stakeholder
+    activeStakeholders.forEach(stakeholder => {
+      const balance = stakeholderBalances[stakeholder.id];
+      balance.remaining = balance.totalShare - balance.totalPaid;
+    });
+
     return {
       totalProfit,
       totalCost,
       totalBalance: totalProfit - totalCost,
       stakeholders: activeStakeholders,
       stakeholderTotals,
+      stakeholderBalances,
       monthlyCalculations,
     };
   } catch (error) {
