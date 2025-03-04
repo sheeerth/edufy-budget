@@ -13,25 +13,27 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
-  
+
   // Initialize the database and load data
   useEffect(() => {
     const initialize = async () => {
       try {
         await initDB();
-        await loadTransactions();
-        await loadStakeholders();
+        // await loadTransactions();
+        // await loadStakeholders();
       } catch (error) {
         console.error('Failed to initialize database:', error);
         setError('Failed to initialize the database. Please refresh the page.');
       } finally {
+        await loadTransactions();
+        await loadStakeholders();
         setIsLoading(false);
       }
     };
-    
+
     initialize();
   }, []);
-  
+
   const loadTransactions = async () => {
     try {
       const allTransactions = await getAllTransactions();
@@ -41,7 +43,7 @@ export default function Home() {
       setError('Failed to load transactions. Please try again.');
     }
   };
-  
+
   const loadStakeholders = async () => {
     try {
       const allStakeholders = await getAllStakeholders();
@@ -51,7 +53,7 @@ export default function Home() {
       setError('Failed to load stakeholders. Please try again.');
     }
   };
-  
+
   const handleAddTransaction = async (transaction: Omit<Transaction, 'id'>) => {
     try {
       await addTransaction(transaction);
@@ -63,12 +65,12 @@ export default function Home() {
       throw error;
     }
   };
-  
+
   const refreshData = () => {
     loadTransactions();
     setRefreshTrigger(prev => prev + 1);
   };
-  
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -79,13 +81,13 @@ export default function Home() {
       </div>
     );
   }
-  
+
   if (error) {
     return (
       <div className="p-6 bg-red-50 text-red-700 rounded-lg border border-red-200 max-w-3xl mx-auto">
         <h2 className="text-lg font-semibold mb-2">Error</h2>
         <p>{error}</p>
-        <button 
+        <button
           onClick={() => window.location.reload()}
           className="mt-4 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
         >
@@ -94,23 +96,23 @@ export default function Home() {
       </div>
     );
   }
-  
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
       <div className="lg:col-span-1">
         <TransactionForm onAddTransaction={handleAddTransaction} />
       </div>
-      
+
       <div className="lg:col-span-3 space-y-6">
-        <FinancialSummary 
-          transactions={transactions} 
+        <FinancialSummary
+          transactions={transactions}
           refreshTrigger={refreshTrigger}
-          stakeholders={stakeholders} 
+          stakeholders={stakeholders}
         />
-        
-        <TransactionList 
-          transactions={transactions} 
-          onRefresh={refreshData} 
+
+        <TransactionList
+          transactions={transactions}
+          onRefresh={refreshData}
         />
       </div>
     </div>
