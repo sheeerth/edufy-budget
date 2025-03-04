@@ -45,7 +45,7 @@ interface FinanceDB extends DBSchema {
 
 // Database constants
 const DB_NAME = 'companyFinanceDB';
-const DB_VERSION = 2;
+const DB_VERSION = 1;
 const TRANSACTION_STORE = 'transactions';
 const STAKEHOLDER_STORE = 'stakeholders';
 const PAYMENT_STORE = 'payments';
