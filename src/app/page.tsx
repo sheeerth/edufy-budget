@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import TransactionForm from '../components/TransactionForm';
 import TransactionList from '../components/TransactionList';
 import FinancialSummary from '../components/FinancialSummary';
-import { initDB, getAllTransactions, addTransaction, getAllStakeholders } from '../lib/db';
+import {initDB, getAllTransactions, addTransaction, getAllStakeholders, closeDB} from '../lib/db';
 import { Transaction, Stakeholder } from '../types';
 
 export default function Home() {
@@ -18,20 +18,57 @@ export default function Home() {
   useEffect(() => {
     const initialize = async () => {
       try {
-        await initDB();
-        // await loadTransactions();
-        // await loadStakeholders();
+        setIsLoading(true);
+        setError(null);
+
+        // Initialize database with a retry mechanism
+        let retries = 0;
+        const maxRetries = 3;
+        let initialized = false;
+
+        while (!initialized && retries < maxRetries) {
+          try {
+            await initDB();
+            initialized = true;
+          } catch (error) {
+            console.error(`Database initialization attempt ${retries + 1} failed:`, error);
+            retries++;
+            // Wait before retrying
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        }
+
+        if (!initialized) {
+          throw new Error(`Failed to initialize database after ${maxRetries} attempts`);
+        }
+
+        // Load data after successful initialization
+        await Promise.all([
+          loadTransactions(),
+          loadStakeholders()
+        ]);
       } catch (error) {
-        console.error('Failed to initialize database:', error);
-        setError('Failed to initialize the database. Please refresh the page.');
+        console.error('Failed to initialize application:', error);
+        setError(typeof error === 'object' && error !== null && 'message' in error
+            ? String(error.message)
+            : 'Failed to initialize the database. Please refresh the page.');
       } finally {
-        await loadTransactions();
-        await loadStakeholders();
         setIsLoading(false);
       }
     };
 
     initialize();
+
+    // Clean up database connection when component unmounts
+    return () => {
+      // Close the database connection
+      // This is important to prevent issues when the component remounts
+      try {
+        closeDB();
+      } catch (err) {
+        console.error('Error closing database connection:', err);
+      }
+    };
   }, []);
 
   const loadTransactions = async () => {
