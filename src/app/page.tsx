@@ -4,8 +4,14 @@ import React, { useState, useEffect } from 'react';
 import TransactionForm from '../components/TransactionForm';
 import TransactionList from '../components/TransactionList';
 import FinancialSummary from '../components/FinancialSummary';
-import {initDB, getAllTransactions, addTransaction, getAllStakeholders, closeDB} from '../lib/db';
-import { Transaction, Stakeholder } from '../types';
+import {
+  getAllTransactions,
+  getAllStakeholders,
+  addTransaction,
+  initApp,
+  closeApp
+} from '@/lib/api';
+import { Transaction, Stakeholder } from '@/types';
 
 export default function Home() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -14,33 +20,15 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
 
-  // Initialize the database and load data
+  // Initialize the application and load data
   useEffect(() => {
     const initialize = async () => {
       try {
         setIsLoading(true);
         setError(null);
 
-        // Initialize database with a retry mechanism
-        let retries = 0;
-        const maxRetries = 3;
-        let initialized = false;
-
-        while (!initialized && retries < maxRetries) {
-          try {
-            await initDB();
-            initialized = true;
-          } catch (error) {
-            console.error(`Database initialization attempt ${retries + 1} failed:`, error);
-            retries++;
-            // Wait before retrying
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          }
-        }
-
-        if (!initialized) {
-          throw new Error(`Failed to initialize database after ${maxRetries} attempts`);
-        }
+        // Initialize app and connect to the API
+        await initApp();
 
         // Load data after successful initialization
         await Promise.all([
@@ -51,7 +39,7 @@ export default function Home() {
         console.error('Failed to initialize application:', error);
         setError(typeof error === 'object' && error !== null && 'message' in error
             ? String(error.message)
-            : 'Failed to initialize the database. Please refresh the page.');
+            : 'Failed to initialize the application. Please check your database connection.');
       } finally {
         setIsLoading(false);
       }
@@ -59,15 +47,10 @@ export default function Home() {
 
     initialize();
 
-    // Clean up database connection when component unmounts
+    // Clean up when component unmounts
     return () => {
-      // Close the database connection
-      // This is important to prevent issues when the component remounts
-      try {
-        closeDB();
-      } catch (err) {
-        console.error('Error closing database connection:', err);
-      }
+      // Close the application
+      closeApp();
     };
   }, []);
 
@@ -110,48 +93,50 @@ export default function Home() {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mb-2"></div>
-          <p className="text-gray-600">Loading application...</p>
+        <div className="flex justify-center items-center h-64">
+          <div className="text-center">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mb-2"></div>
+            <p className="text-gray-600">Loading application...</p>
+          </div>
         </div>
-      </div>
     );
   }
 
   if (error) {
     return (
-      <div className="p-6 bg-red-50 text-red-700 rounded-lg border border-red-200 max-w-3xl mx-auto">
-        <h2 className="text-lg font-semibold mb-2">Error</h2>
-        <p>{error}</p>
-        <button
-          onClick={() => window.location.reload()}
-          className="mt-4 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
-        >
-          Refresh Page
-        </button>
-      </div>
+        <div className="p-6 bg-red-50 text-red-700 rounded-lg border border-red-200 max-w-3xl mx-auto">
+          <h2 className="text-lg font-semibold mb-2">Error</h2>
+          <p>{error}</p>
+          <button
+              onClick={() => window.location.reload()}
+              className="mt-4 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+          >
+            Refresh Page
+          </button>
+        </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-      <div className="lg:col-span-1">
-        <TransactionForm onAddTransaction={handleAddTransaction} />
-      </div>
+      <>
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          <div className="lg:col-span-1">
+            <TransactionForm onAddTransaction={handleAddTransaction} />
+          </div>
 
-      <div className="lg:col-span-3 space-y-6">
-        <FinancialSummary
-          transactions={transactions}
-          refreshTrigger={refreshTrigger}
-          stakeholders={stakeholders}
-        />
+          <div className="lg:col-span-3 space-y-6">
+            <FinancialSummary
+                transactions={transactions}
+                refreshTrigger={refreshTrigger}
+                stakeholders={stakeholders}
+            />
 
-        <TransactionList
-          transactions={transactions}
-          onRefresh={refreshData}
-        />
-      </div>
-    </div>
+            <TransactionList
+                transactions={transactions}
+                onRefresh={refreshData}
+            />
+          </div>
+        </div>
+      </>
   );
 }

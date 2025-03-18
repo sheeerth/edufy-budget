@@ -9,8 +9,8 @@ import {
   FinancialSummary as FinancialSummaryType,
   StakeholderBalance
 } from '../types';
-import { formatCurrency, formatMonth } from '../lib/utils';
-import { calculateFinancialSummary, recordPayment } from '../lib/db';
+import { formatCurrency, formatMonth } from '@/lib/utils';
+import { calculateFinancialSummary, recordPayment } from '@/lib/api';
 import PaymentModal from './PaymentModal';
 import GlobalPaymentModal from './GlobalPaymentModal';
 import PaymentHistory from './PaymentHistory';
@@ -63,7 +63,7 @@ const FinancialSummary: React.FC<FinancialSummaryProps> = ({
             dateRange.startDate && dateRange.endDate ? dateRange : null
         );
 
-        setSummary(calculatedSummary);
+        setSummary(calculatedSummary as FinancialSummaryType);
       } catch (error) {
         console.error('Failed to calculate summary:', error);
       } finally {
@@ -170,7 +170,7 @@ const FinancialSummary: React.FC<FinancialSummaryProps> = ({
           dateRange.startDate && dateRange.endDate ? dateRange : null
       );
 
-      setSummary(recalculatedSummary);
+      setSummary(recalculatedSummary as FinancialSummaryType);
     } catch (error) {
       console.error('Failed to record payment:', error);
       throw error; // Re-throw to be handled by the modal
@@ -309,15 +309,16 @@ const FinancialSummary: React.FC<FinancialSummaryProps> = ({
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
                         {formatCurrency(balance.totalPaid)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-blue-600">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium">
+                      <span className={balance.remaining >= 0 ? 'text-blue-600' : 'text-red-600'}>
                         {formatCurrency(balance.remaining)}
+                      </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
                         <div className="flex justify-center space-x-2">
                           <button
                               onClick={() => openGlobalPaymentModal(stakeholder.id)}
-                              disabled={balance.remaining <= 0}
-                              className="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                              className="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
                           >
                             Rejestruj wypłatę
                           </button>
@@ -412,14 +413,15 @@ const FinancialSummary: React.FC<FinancialSummaryProps> = ({
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
                                   {formatCurrency(paid)}
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-gray-900">
-                                  {formatCurrency(remaining)}
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium">
+                            <span className={remaining >= 0 ? 'text-gray-900' : 'text-red-600'}>
+                              {formatCurrency(remaining)}
+                            </span>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
                                   <button
                                       onClick={() => openPaymentModal(stakeholder.id, month.month)}
-                                      disabled={remaining <= 0}
-                                      className="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                                      className="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
                                   >
                                     Rejestruj wypłatę
                                   </button>

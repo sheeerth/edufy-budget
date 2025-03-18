@@ -62,9 +62,16 @@ const GlobalPaymentModal: React.FC<GlobalPaymentModalProps> = ({
             return;
         }
 
+        // Check if amount exceeds remaining balance and show confirmation if it does
         if (amountValue > remaining) {
-            setError(`Kwota nie może przekroczyć dostępnego salda ${formatCurrency(remaining)}`);
-            return;
+            const isConfirmed = window.confirm(
+                `Uwaga: Wprowadzona kwota ${formatCurrency(amountValue)} przekracza dostępne saldo stakeholdera ${formatCurrency(remaining)}. ` +
+                `Stakeholder będzie miał ujemny bilans ${formatCurrency(remaining - amountValue)}. Czy na pewno chcesz kontynuować?`
+            );
+
+            if (!isConfirmed) {
+                return;
+            }
         }
 
         setIsSubmitting(true);
@@ -122,8 +129,16 @@ const GlobalPaymentModal: React.FC<GlobalPaymentModalProps> = ({
 
                         <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-200">
                             <div className="text-gray-600 font-semibold">Pozostało do wypłaty:</div>
-                            <div className="font-semibold text-blue-600">{formatCurrency(remaining)}</div>
+                            <div className={`font-semibold ${remaining >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+                                {formatCurrency(remaining)}
+                            </div>
                         </div>
+
+                        {remaining < 0 && (
+                            <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
+                                <strong>Uwaga:</strong> Ten stakeholder ma już ujemny bilans. Wypłaty będą zwiększać ujemne saldo.
+                            </div>
+                        )}
                     </div>
 
                     <div className="mb-4">
@@ -135,10 +150,9 @@ const GlobalPaymentModal: React.FC<GlobalPaymentModalProps> = ({
                             id="paymentAmount"
                             value={amount}
                             onChange={handleAmountChange}
-                            placeholder={`Wprowadź kwotę (max: ${formatCurrency(remaining)})`}
+                            placeholder="Wprowadź kwotę"
                             step="0.01"
                             min="0.01"
-                            max={remaining}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                         />
                         {error && <p className="mt-1 text-sm text-red-600">{error}</p>}

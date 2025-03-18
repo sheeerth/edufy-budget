@@ -25,7 +25,7 @@ export interface Stakeholder {
 export interface Payment {
   id: number;
   stakeholderId: number;
-  month?: string; // Optional - Format: YYYY-M
+  month?: string | null; // Optional - Format: YYYY-M
   amount: number;
   date: Date;
   notes: string;
@@ -84,7 +84,7 @@ export interface FinancialSummary {
   totalCost: number;
   totalBalance: number;
   stakeholders: Stakeholder[];
-  stakeholderTotals: StakeholderShare;
+  stakeholderTotals?: StakeholderShare;
   stakeholderBalances: { [stakeholderId: number]: StakeholderBalance };
   monthlyCalculations: MonthlyCalculation[];
 }
